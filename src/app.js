@@ -59,15 +59,17 @@ function main(sources) {
 
   const sendClicks$ = sources.DOM.select('.send-message').events('click');
 
-  const clickOrSubmit$ = Observable.merge(messageSubmits$, sendClicks$);
-
+  const clickOrSubmit$ = Observable.merge(messageSubmits$, sendClicks$)
 
   const request$ = Observable.combineLatest(
     clickOrSubmit$,
     inputValue$,
     usernameChanges$,
     (submit, inputVal, username) => ({ inputVal, username })
-  ).filter(
+    // TODO: this debounce stops duplicate messages - which I need to figure out why they happen
+    // I think that listening to clicks & input value changes means we get an event when either one of those things happen
+    // maybe?
+  ).debounce(10).filter(
     ({ inputVal }) => inputVal !== ''
   ).map(({ inputVal, username }) => {
     return {
@@ -83,6 +85,20 @@ function main(sources) {
       }
     }
   });
+
+  sources.DOM.select(':root').observable.subscribe(() => {
+    const messageList = document.querySelector('#message-list');
+    if (messageList) {
+      messageList.scrollTop = messageList.offsetHeight;
+      console.log('called');
+    }
+
+    const input = document.querySelector('.input-message');
+    if (input) {
+      input.value = '';
+    }
+  });
+
 
   function phoneOverlay(body) {
     return div({ className: 'marvel-device iphone6 silver' }, [
@@ -101,7 +117,7 @@ function main(sources) {
   function viewMessages(pusherMessages) {
     return phoneOverlay(
       div({ className: 'light-grey-blue-background chat-app' }, [
-        div({ className: 'message-list' }, [
+        div({ id: 'message-list' }, [
           div({ className: 'time-divide', attributes: { style: "margin-top: 15px" } }, [
             span({ className: 'date' }, 'Today' )
           ])

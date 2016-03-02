@@ -1,9 +1,9 @@
-
 import Cycle from '@cycle/core';
 import { span, p, div, form, button, input, img, makeDOMDriver } from '@cycle/dom';
 import { Subject, Observable } from 'rx';
 import { pusherObservable } from './pusher';
 import { makeHTTPDriver } from '@cycle/http';
+import strftime from 'strftime';
 
 
 function main(sources) {
@@ -113,8 +113,7 @@ function main(sources) {
             div({ className: 'text-display' }, [
               div({ className: 'message-data' }, [
                 span({ className: 'author' }, username),
-                // span({ className: 'timestamp' }, strftime('%H:%M:%S %P', new Date(time))),
-                span({ className: 'timestamp' }, 'date here'),
+                span({ className: 'timestamp' }, strftime('%H:%M:%S %P', new Date(time))),
                 span({ className: 'seen' }),
               ]),
               p({ className: 'message-body' }, text)

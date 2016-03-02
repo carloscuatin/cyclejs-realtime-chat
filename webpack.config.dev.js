@@ -9,7 +9,11 @@ module.exports = {
   module: {
     loaders: [{
       test: /\.js$/,
-      loader: 'babel'
+      loader: 'babel',
+      exclude: /node_modules/,
+      query: {
+        cacheDirectory: true
+      }
     }]
   }
 }

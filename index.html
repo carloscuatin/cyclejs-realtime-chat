@@ -1,10 +1,44 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Swanky New Project</title>
+    <title>PusherJS + RxJS + CycleJS Chat</title>
+    <link rel="stylesheet" href="devices.min.css">
+    <link rel="stylesheet" href="http://d3dhju7igb20wy.cloudfront.net/assets/0-4-0/all-the-things.css">
     <link rel="stylesheet" type="text/css" href="style.css" />
+    <link href='//fonts.googleapis.com/css?family=Source+Sans+Pro:200,300,400,600,700,900,200italic,300italic,400italic,600italic,700italic,900italic' rel='stylesheet' type='text/css'>
   </head>
-  <body>
+  <body class="blue-gradient-background">
+    <div class="navbar navbar-inverse navbar-default" role="navigation">
+      <div class="container navbar-container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <div class="navbar-brand">
+            <a href="/"><img class="full-logo" src="/static/images/pusher-logo.png" width="111" height="37"></a>
+            <a href="/"><img class="small-logo" src="/static/images/pusher-logo-p.png" height="37"></a>
+          </div>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav" id="nav-ul">
+            <li><a class="signup-link" href="http://pusher.com/signup">Create a Free Account</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div>
+      <section class="intro-splash splash">
+        <div class="container center-all-container">
+          <h1 class="white light splash-title" style="font-size: 36px">
+            Realtime Chat with Pusher and CycleJS
+          </h1>
+          <div id="app"></div>
+        </div>
+      </section>
+    </div>
     <script src="build/webpack-dev-build.js"></script>
   </body>
 </html>

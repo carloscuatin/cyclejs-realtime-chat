@@ -39,13 +39,15 @@ function main(sources) {
     .startWith({ target: '' })
     .map(e => e.target.value)
 
-  const messageSubmits$ = sources.DOM
-    .select('.messages-form')
-    .events('submit');
+  const messageSubmits$ = sources.DOM.select('.messages-form').events('submit');
+
+  const sendClicks$ = sources.DOM.select('.send-message').events('click');
+
+  const clickOrSubmit$ = Observable.merge(messageSubmits$, sendClicks$);
 
 
   const request$ = Observable.combineLatest(
-    messageSubmits$,
+    clickOrSubmit$,
     inputValue$,
     (submit, inputVal) => inputVal
   ).filter(

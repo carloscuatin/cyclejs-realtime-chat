@@ -31,8 +31,8 @@ function main(sources) {
   const username$ = sources.DOM
     .select('.swish-input')
     .events('change')
-    .startWith({ target: { value: '' } })
-    .map(e => e.target.value);
+    .map(e => e.target.value)
+    .startWith('');
 
   const usernameSubmit$ = sources.DOM.select('.username-form').events('submit');
 
@@ -52,8 +52,8 @@ function main(sources) {
   const inputValue$ = sources.DOM
     .select('.input-message')
     .events('change')
-    .startWith({ target: { value: '' } })
     .map(e => e.target.value)
+    .startWith('');
 
   const messageSubmits$ = sources.DOM.select('.messages-form').events('submit');
 
@@ -61,17 +61,18 @@ function main(sources) {
 
   const clickOrSubmit$ = Observable.merge(messageSubmits$, sendClicks$)
 
-  const request$ = Observable.combineLatest(
-    clickOrSubmit$,
-    inputValue$,
-    usernameChanges$,
-    (submit, inputVal, username) => ({ inputVal, username })
-    // TODO: this debounce stops duplicate messages - which I need to figure out why they happen
-    // I think that listening to clicks & input value changes means we get an event when either one of those things happen
-    // maybe?
-  ).debounce(10).filter(
+  const request$ = clickOrSubmit$.flatMap(() => {
+    return Observable.combineLatest(
+      inputValue$,
+      usernameChanges$,
+      (inputVal, username) => {
+        return ({ inputVal, username })
+      }
+    );
+  }).distinctUntilChanged().filter(
     ({ inputVal }) => inputVal !== ''
   ).map(({ inputVal, username }) => {
+    console.log('running', inputVal);
     return {
       method: 'POST',
       url: 'http://localhost:4567/messages',
@@ -90,7 +91,6 @@ function main(sources) {
     const messageList = document.querySelector('#message-list');
     if (messageList) {
       messageList.scrollTop = messageList.offsetHeight;
-      console.log('called');
     }
 
     const input = document.querySelector('.input-message');

@@ -28,15 +28,31 @@ function main(sources) {
 
 
 
+  const username$ = sources.DOM
+    .select('.swish-input')
+    .events('change')
+    .startWith({ target: { value: '' } })
+    .map(e => e.target.value);
+
+  const usernameSubmit$ = sources.DOM.select('.username-form').events('submit');
+
+  const usernameChanges$ = Observable.combineLatest(
+    username$,
+    usernameSubmit$,
+    (username, submitEvent) => username
+  ).startWith('');
+
+
   const state$ = Observable.combineLatest(
     allPusherMessages$,
-    (pusherMessages) => ({ pusherMessages })
+    usernameChanges$,
+    (pusherMessages, username) => ({ pusherMessages, username })
   );
 
   const inputValue$ = sources.DOM
     .select('.input-message')
     .events('change')
-    .startWith({ target: '' })
+    .startWith({ target: { value: '' } })
     .map(e => e.target.value)
 
   const messageSubmits$ = sources.DOM.select('.messages-form').events('submit');
@@ -49,10 +65,11 @@ function main(sources) {
   const request$ = Observable.combineLatest(
     clickOrSubmit$,
     inputValue$,
-    (submit, inputVal) => inputVal
+    usernameChanges$,
+    (submit, inputVal, username) => ({ inputVal, username })
   ).filter(
-    (inputValue) => inputValue !== ''
-  ).map((inputValue) => {
+    ({ inputVal }) => inputVal !== ''
+  ).map(({ inputVal, username }) => {
     return {
       method: 'POST',
       url: 'http://localhost:4567/messages',
@@ -61,8 +78,8 @@ function main(sources) {
       },
       send: {
         time: new Date(),
-        text: inputValue,
-        username: 'pusher'
+        text: inputVal,
+        username
       }
     }
   });
@@ -81,40 +98,60 @@ function main(sources) {
     ]);
   }
 
-  function view(state$) {
-    return state$.map(({ pusherMessages }) => {
-      return phoneOverlay(
-        div({ className: 'light-grey-blue-background chat-app' }, [
-          div({ className: 'message-list' }, [
-            div({ className: 'time-divide', attributes: { style: "margin-top: 15px" } }, [
-              span({ className: 'date' }, 'Today' )
-            ])
-          ].concat(pusherMessages.map(({ text, username, time }) => {
-            return div({ className: 'message' }, [
-              div({ className: 'avatar' }, [
-                img({ attributes: { src: `https://twitter.com/${username}/profile_image?size=original` } })
+  function viewMessages(pusherMessages) {
+    return phoneOverlay(
+      div({ className: 'light-grey-blue-background chat-app' }, [
+        div({ className: 'message-list' }, [
+          div({ className: 'time-divide', attributes: { style: "margin-top: 15px" } }, [
+            span({ className: 'date' }, 'Today' )
+          ])
+        ].concat(pusherMessages.map(({ text, username, time }) => {
+          return div({ className: 'message' }, [
+            div({ className: 'avatar' }, [
+              img({ attributes: { src: `https://twitter.com/${username}/profile_image?size=original` } })
+            ]),
+            div({ className: 'text-display' }, [
+              div({ className: 'message-data' }, [
+                span({ className: 'author' }, username),
+                // span({ className: 'timestamp' }, strftime('%H:%M:%S %P', new Date(time))),
+                span({ className: 'timestamp' }, 'date here'),
+                span({ className: 'seen' }),
               ]),
-              div({ className: 'text-display' }, [
-                div({ className: 'message-data' }, [
-                  span({ className: 'author' }, username),
-                  // span({ className: 'timestamp' }, strftime('%H:%M:%S %P', new Date(time))),
-                  span({ className: 'timestamp' }, 'date here'),
-                  span({ className: 'seen' }),
-                ]),
-                p({ className: 'message-body' }, text)
-              ])
+              p({ className: 'message-body' }, text)
             ])
-          }))),
-          div({ className: 'action-bar' }, [
-            form({ className: 'messages-form', onsubmit: (e) => e.preventDefault() }, [
-              input({ className: 'input-message col-xs-10', attributes: { placeholder: 'Your message' } }),
-              div({ className: 'option col-xs-1 green-background send-message' }, [
-                span({ className: 'white light fa fa-paper-plane-o' })
-              ])
+          ])
+        }))),
+        div({ className: 'action-bar' }, [
+          form({ className: 'messages-form', onsubmit: (e) => e.preventDefault() }, [
+            input({ className: 'input-message col-xs-10', attributes: { placeholder: 'Your message' } }),
+            div({ className: 'option col-xs-1 green-background send-message' }, [
+              span({ className: 'white light fa fa-paper-plane-o' })
             ])
           ])
         ])
-      )
+      ])
+    )
+  }
+
+  function viewUserinput() {
+    return div([
+      p({ className: 'light white' }, 'Enter your Twitter name and start chatting!'),
+      div({ attributes: { style: 'margin-top: 20px' } }, [
+        form({ className: 'username-form', onsubmit: (e) => e.preventDefault() }, [
+          input({ id: 'input-name', attributes: { placeholder: 'Enter your Twitter name!', type: 'text' }, className: 'swish-input' }),
+          button({ attributes: { type: 'submit' }, className: 'bright-blue-hover btn-white', id: 'try-it-out' }, 'Start chat')
+        ])
+      ])
+    ])
+  }
+
+  function view(state$) {
+    return state$.map(({ pusherMessages, username }) => {
+      if (username) {
+        return viewMessages(pusherMessages);
+      } else {
+        return viewUserinput();
+      }
     })
   }
 

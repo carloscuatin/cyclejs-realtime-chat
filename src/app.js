@@ -26,52 +26,55 @@ function main(sources) {
     time: new Date()
   }]);
 
+  const intent = DOM => {
+    const changeMessage$ = sources.DOM
+      .select('.input-message')
+      .events('input')
+      .map(e => e.target.value)
+      .share();
 
+    return {
+      submitUsername$: sources.DOM
+        .select('.swish-input')
+        .events('input')
+        .sample(sources.DOM.select('.username-form').events('submit'))
+        .map(e => e.target.value)
+        .do(x => console.log('submitUsername', x))
+        .share(),
+      changeMessage$: changeMessage$.do(x => console.log('changeMessage', x)).share(),
+      submitMessage$: changeMessage$
+        .sample(sources.DOM.select('.messages-form').events('submit'))
+        .do(x => console.log('submitMessage', x))
+        .share()
+    }
+  };
 
-  const username$ = sources.DOM
-    .select('.swish-input')
-    .events('change')
-    .startWith({ target: { value: '' } })
-    .map(e => e.target.value);
+  const actions = intent(sources.DOM);
 
-  const usernameSubmit$ = sources.DOM.select('.username-form').events('submit');
+  const model = actions => {
+    const message$ = Rx.Observable.merge(
+      actions.changeMessage$,
+      actions.submitMessage$.map(x => '')
+    ).startWith('')
 
-  const usernameChanges$ = Observable.combineLatest(
-    username$,
-    usernameSubmit$,
-    (username, submitEvent) => username
-  ).startWith('');
+    return Observable.combineLatest(
+      allPusherMessages$.do(x => console.log('allPusherMessages', x)),
+      actions.submitUsername$.startWith(''),
+      message$,
+      (pusherMessages, username, message) => ({ pusherMessages, username, message })
+    );
+  };
 
+  const state$ = model(actions);
 
-  const state$ = Observable.combineLatest(
-    allPusherMessages$,
-    usernameChanges$,
-    (pusherMessages, username) => ({ pusherMessages, username })
-  );
-
-  const inputValue$ = sources.DOM
-    .select('.input-message')
-    .events('change')
-    .startWith({ target: { value: '' } })
-    .map(e => e.target.value)
-
-  const messageSubmits$ = sources.DOM.select('.messages-form').events('submit');
-
-  const sendClicks$ = sources.DOM.select('.send-message').events('click');
-
-  const clickOrSubmit$ = Observable.merge(messageSubmits$, sendClicks$)
-
-  const request$ = Observable.combineLatest(
-    clickOrSubmit$,
-    inputValue$,
-    usernameChanges$,
-    (submit, inputVal, username) => ({ inputVal, username })
-    // TODO: this debounce stops duplicate messages - which I need to figure out why they happen
-    // I think that listening to clicks & input value changes means we get an event when either one of those things happen
-    // maybe?
-  ).debounce(10).filter(
-    ({ inputVal }) => inputVal !== ''
-  ).map(({ inputVal, username }) => {
+  const request$ = Rx.Observable.combineLatest(
+    actions.submitMessage$,
+    actions.submitUsername$,
+    (message, username) => ({ message, username })
+  ).filter(
+    ({ message }) => message !== ''
+  ).map(({ message, username }) => {
+    console.log('running', message);
     return {
       method: 'POST',
       url: 'http://localhost:4567/messages',
@@ -80,22 +83,17 @@ function main(sources) {
       },
       send: {
         time: new Date(),
-        text: inputVal,
+        text: message,
         username
       }
     }
   });
 
+  // TODO: Move to driver
   sources.DOM.select(':root').observable.subscribe(() => {
     const messageList = document.querySelector('#message-list');
     if (messageList) {
       messageList.scrollTop = messageList.offsetHeight;
-      console.log('called');
-    }
-
-    const input = document.querySelector('.input-message');
-    if (input) {
-      input.value = '';
     }
   });
 
@@ -114,7 +112,7 @@ function main(sources) {
     ]);
   }
 
-  function viewMessages(pusherMessages) {
+  function viewMessages(pusherMessages, message) {
     return phoneOverlay(
       div({ className: 'light-grey-blue-background chat-app' }, [
         div({ id: 'message-list' }, [
@@ -138,8 +136,8 @@ function main(sources) {
         }))),
         div({ className: 'action-bar' }, [
           form({ className: 'messages-form', onsubmit: (e) => e.preventDefault() }, [
-            input({ className: 'input-message col-xs-10', attributes: { placeholder: 'Your message' } }),
-            div({ className: 'option col-xs-1 green-background send-message' }, [
+            input({ className: 'input-message col-xs-10', value: message, attributes: { placeholder: 'Your message' } }),
+            button({ className: 'option col-xs-1 green-background send-message' }, [
               span({ className: 'white light fa fa-paper-plane-o' })
             ])
           ])
@@ -161,9 +159,9 @@ function main(sources) {
   }
 
   function view(state$) {
-    return state$.map(({ pusherMessages, username }) => {
+    return state$.map(({ pusherMessages, username, message }) => {
       if (username) {
-        return viewMessages(pusherMessages);
+        return viewMessages(pusherMessages, message);
       } else {
         return viewUserinput();
       }

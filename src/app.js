@@ -39,12 +39,10 @@ function main(sources) {
         .events('input')
         .sample(sources.DOM.select('.username-form').events('submit'))
         .map(e => e.target.value)
-        .do(x => console.log('submitUsername', x))
         .share(),
-      changeMessage$: changeMessage$.do(x => console.log('changeMessage', x)).share(),
+      changeMessage$: changeMessage$,
       submitMessage$: changeMessage$
         .sample(sources.DOM.select('.messages-form').events('submit'))
-        .do(x => console.log('submitMessage', x))
         .share()
     }
   };
@@ -54,11 +52,14 @@ function main(sources) {
   const model = actions => {
     const message$ = Rx.Observable.merge(
       actions.changeMessage$,
+      // we listen to this observable
+      // because when the submit button is clicked
+      // we want to clear the message input out
       actions.submitMessage$.map(x => '')
     ).startWith('')
 
     return Observable.combineLatest(
-      allPusherMessages$.do(x => console.log('allPusherMessages', x)),
+      allPusherMessages$,
       actions.submitUsername$.startWith(''),
       message$,
       (pusherMessages, username, message) => ({ pusherMessages, username, message })
@@ -74,7 +75,6 @@ function main(sources) {
   ).filter(
     ({ message }) => message !== ''
   ).map(({ message, username }) => {
-    console.log('running', message);
     return {
       method: 'POST',
       url: 'http://localhost:4567/messages',
@@ -89,7 +89,6 @@ function main(sources) {
     }
   });
 
-  // TODO: Move to driver
   sources.DOM.select(':root').observable.subscribe(() => {
     const messageList = document.querySelector('#message-list');
     if (messageList) {
